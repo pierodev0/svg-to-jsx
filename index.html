@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversor de SVG a JSX para Tailwind</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prettier/2.8.8/standalone.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prettier/2.8.8/parser-html.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prettier/2.8.8/parser-babel.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        textarea {
+            width: 100%;
+            height: 150px;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        #output {
+            white-space: pre-wrap;
+            background-color: #f4f4f4;
+            padding: 10px;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <h1>Conversor de SVG a JSX para Tailwind</h1>
+    <textarea id="input" placeholder="Pega tu código SVG aquí"></textarea>
+    <button onclick="convertToJSX()">Convertir</button>
+    <pre id="output"></pre>
+
+    <script>
+        function convertToJSX() {
+            const input = document.getElementById('input').value;
+            const parser = new DOMParser();
+            const svgDoc = parser.parseFromString(input, 'image/svg+xml');
+            const svgElement = svgDoc.documentElement;
+
+            // Obtener width, height y viewBox
+            const width = svgElement.getAttribute('width') || '16';
+            const height = svgElement.getAttribute('height') || '16';
+            let viewBox = svgElement.getAttribute('viewBox');
+
+            // Si no hay viewBox, crearlo a partir de width y height
+            if (!viewBox) {
+                viewBox = `0 0 ${width} ${height}`;
+            }
+
+            // Eliminar atributos de estilo y width/height
+            svgElement.removeAttribute('width');
+            svgElement.removeAttribute('height');
+            svgElement.removeAttribute('style');
+
+            // Asegurar que el viewBox esté presente
+            svgElement.setAttribute('viewBox', viewBox);
+
+            // Procesar elementos hijos
+            processChildren(svgElement);
+
+            // Crear componente React
+            const componentName = 'Icon';
+            const sizeTailwind = `w-[${width}] h-[${height}]`;
+
+            const jsxCode = `
+import React from 'react';
+
+function ${componentName}({ className }) {
+  return (
+    ${svgElement.outerHTML.replace('<svg', `<svg className={\`${sizeTailwind} \${className}\`}`)}
+  );
+}
+
+export default ${componentName};
+            `;
+
+            // Formatear el código con Prettier
+            const formattedCode = prettier.format(jsxCode, {
+                parser: 'babel',
+                plugins: [prettierPlugins.babel],
+                semi: true,
+                singleQuote: true,
+            });
+
+            document.getElementById('output').textContent = formattedCode;
+        }
+
+        function processChildren(element) {
+            for (const child of element.children) {
+                child.removeAttribute('style');
+                if (child.children.length > 0) {
+                    processChildren(child);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
